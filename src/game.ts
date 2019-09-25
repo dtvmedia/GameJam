@@ -1,3 +1,5 @@
+import utils from "../node_modules/decentraland-ecs-utils/index"
+
 /// --- Set up a system ---
 
 class RotatorSystem {
