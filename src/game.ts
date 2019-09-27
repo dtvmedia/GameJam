@@ -49,20 +49,44 @@ let obstacle = new Entity()
 obstacle.addComponent(new GLTFShape("models/obstacle.glb"))
 obstacle.addComponent(new Transform({
   scale: new Vector3(1,10,1),
-  position: new Vector3(32,-3,14)
+  position: new Vector3(31,-3,14)
 }))
+
+let obstacle2 = new Entity()
+obstacle2.addComponent(new GLTFShape("models/obstacle.glb"))
+obstacle2.addComponent(new Transform({
+  scale: new Vector3(1,10,1),
+  position: new Vector3(31,-3,14)
+}))
+
 
 
 
 //systems
 
+
 export class MoveObstacle implements ISystem {
+  entity: Entity
+  constructor(_entity){
+    this.entity=_entity
+  }
   update() {
-    let transform = obstacle.getComponent(Transform)
+    if(this.entity.isAddedToEngine){
+      engine.addEntity(this.entity)}
+    let transform = this.entity.getComponent(Transform)
+    let xPos=transform.position.x
     let distance = Vector3.Left().scale(0.1)
     transform.translate(distance)
+    if(xPos<=1){
+      engine.removeEntity(this.entity)
+      
+    }
   }
 }
+
+
+
+
 
 export class MoveBird implements ISystem {
   update() {
@@ -74,13 +98,24 @@ export class MoveBird implements ISystem {
   }
 }
 
+export class newSpawn implements ISystem {
+  onRemoveEntity(entity: Entity){}
+    // Code to run once
+
+    
+    
+  }
+
+
 
 //engine 
 
-engine.addSystem(new MoveObstacle())
-engine.addSystem(new MoveBird())
 
-engine.addEntity(obstacle)
+engine.addSystem(new MoveBird())
+engine.addSystem(new MoveObstacle(obstacle))
+
+
+
 engine.addEntity(cube)
 engine.addEntity(roof)
 engine.addEntity(collider)
