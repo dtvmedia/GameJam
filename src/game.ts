@@ -1,10 +1,64 @@
 import utils from "../node_modules/decentraland-ecs-utils/index"
 
+//custom components
+@Component('obstacle')
+export class Obstacle {
+}
+
 //functions
 
 function randomIntFromInterval(min, max) { // min and max included 
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
+
+
+// Define spawner singleton object
+const spawner = {
+  MAX_POOL_SIZE: 20,
+  pool: [] as Entity[],
+
+  spawnEntity() {
+    // Get an entity from the pool
+    const ent = spawner.getEntityFromPool()
+
+    if (!ent) return
+
+    // Add a transform component to the entity
+    let x =randomIntFromInterval(1,5)
+    let y =randomIntFromInterval(1,10)
+    let pos =randomIntFromInterval(6,10)
+    let t = ent.getComponentOrCreate(Transform)
+    t.position.set(31, pos, 14)
+    t.scale.set(x,y,1)
+    
+
+    //add entity to engine
+    engine.addEntity(ent)
+  },
+
+  getEntityFromPool(): Entity | null {
+    // Check if an existing entity can be used
+    for (let i = 0; i < spawner.pool.length; i++) {
+      if (!spawner.pool[i].alive) {
+        return spawner.pool[i]
+      }
+    }
+    // If none of the existing are available, create a new one, unless the maximum pool size is reached
+    if (spawner.pool.length < spawner.MAX_POOL_SIZE) {
+      let instance = new Entity()
+      spawner.pool.push(instance)
+      instance.addComponent(new Obstacle())
+      instance.addComponent(new GLTFShape("models/obstacle.glb"))
+      return instance
+    }
+    return null
+  }
+}
+
+
+
+
+
 
 //input handlers
 
@@ -45,50 +99,10 @@ collider.addComponent(new Transform({
   //rotation:
 }))
 
-let obstacle = new Entity()
-obstacle.addComponent(new GLTFShape("models/obstacle.glb"))
-obstacle.addComponent(new Transform({
-  scale: new Vector3(1,10,1),
-  position: new Vector3(31,-3,14)
-}))
-
-let obstacle2 = new Entity()
-obstacle2.addComponent(new GLTFShape("models/obstacle.glb"))
-obstacle2.addComponent(new Transform({
-  scale: new Vector3(1,10,1),
-  position: new Vector3(31,-3,14)
-}))
-
-
-
 
 //systems
 
-
-export class MoveObstacle implements ISystem {
-  entity: Entity
-  constructor(_entity){
-    this.entity=_entity
-  }
-  update() {
-    if(this.entity.isAddedToEngine){
-      engine.addEntity(this.entity)}
-    let transform = this.entity.getComponent(Transform)
-    let xPos=transform.position.x
-    let distance = Vector3.Left().scale(0.1)
-    transform.translate(distance)
-    if(xPos<=1){
-      engine.removeEntity(this.entity)
-      
-    }
-  }
-}
-
-
-
-
-
-export class MoveBird implements ISystem {
+export class Gravity implements ISystem {
   update() {
     let transform = cube.getComponent(Transform)
     let current=cube.getComponent(Transform).position.y
@@ -98,22 +112,44 @@ export class MoveBird implements ISystem {
   }
 }
 
-export class newSpawn implements ISystem {
-  onRemoveEntity(entity: Entity){}
-    // Code to run once
-
-    
-    
+let timer: number = 0
+export class createObstacles implements ISystem {
+  update(dt:number) {
+    if (timer>0)
+      {timer-=dt}
+    else
+      {
+        spawner.spawnEntity()
+        timer=4
+      }
   }
+}
+
+const obstacles = engine.getComponentGroup(Obstacle)
+export class moveObstacles implements ISystem {
+  //Executed ths function on every frame
+  update() {
+    // Iterate over the entities in an component group
+    for (let entity of obstacles.entities) {
+      let transform = entity.getComponent(Transform)
+      let xPos=transform.position.x
+      let distance = Vector3.Left().scale(0.1)
+      transform.translate(distance)
+      if(xPos<=1){
+        engine.removeEntity(entity)}
+    }
+  }
+}
+
+
 
 
 
 //engine 
 
-
-engine.addSystem(new MoveBird())
-engine.addSystem(new MoveObstacle(obstacle))
-
+engine.addSystem(new Gravity())
+engine.addSystem(new createObstacles())
+engine.addSystem(new moveObstacles())
 
 
 engine.addEntity(cube)
