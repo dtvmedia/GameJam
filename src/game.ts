@@ -1,9 +1,14 @@
 import utils from "../node_modules/decentraland-ecs-utils/index"
+import { TriggerComponent, TriggerBoxShape } from "../node_modules/decentraland-ecs-utils/triggers/triggerSystem";
 
 //custom components
 @Component('obstacle')
 export class Obstacle {
 }
+
+const birdLayer=1
+const obstacleLayer=2
+const beamLayer=3
 
 //functions
 
@@ -19,17 +24,16 @@ const spawner = {
 
   spawnEntity() {
     // Get an entity from the pool
-    const ent = spawner.getEntityFromPool()
+    let ent = spawner.getEntityFromPool()
 
     if (!ent) return
 
     // Add a transform component to the entity
-    let x =randomIntFromInterval(1,5)
+    /*let x =randomIntFromInterval(1,5)
     let y =randomIntFromInterval(1,10)
-    let pos =randomIntFromInterval(6,10)
+    let pos =randomIntFromInterval(6,10)*/
     let t = ent.getComponentOrCreate(Transform)
-    t.position.set(31, pos, 14)
-    t.scale.set(x,y,1)
+    t.position.set(31.5, 0, 14)
     
 
     //add entity to engine
@@ -46,9 +50,21 @@ const spawner = {
     // If none of the existing are available, create a new one, unless the maximum pool size is reached
     if (spawner.pool.length < spawner.MAX_POOL_SIZE) {
       let instance = new Entity()
+
+      instance.addComponent(new Obstacle()) //set Obstacle flag
+      instance.addComponent(new GLTFShape("models/obstacle.glb")) //set shape
+      instance.addComponent(new utils.TriggerComponent(
+        new utils.TriggerBoxShape(Vector3.One(), Vector3.Zero()), //shape
+           obstacleLayer, //layer
+           beamLayer, //triggeredByLayer
+           () =>{}, //onTriggerEnter
+           () =>{}, //onTriggerExit
+           null, 
+           null, //onCameraExit
+           true
+      
+            ))
       spawner.pool.push(instance)
-      instance.addComponent(new Obstacle())
-      instance.addComponent(new GLTFShape("models/obstacle.glb"))
       return instance
     }
     return null
@@ -66,24 +82,39 @@ const input = Input.instance
 
 // button down event e
 input.subscribe("BUTTON_DOWN", ActionButton.PRIMARY, false, e => {
-  let height=cube.getComponent(Transform).position.y
-  cube.getComponent(Transform).position.set(8,height+1,14)
+  let height=bird.getComponent(Transform).position.y
+  bird.getComponent(Transform).position.set(8,height+1,14)
   
 })
 // button down event f
 input.subscribe("BUTTON_DOWN", ActionButton.SECONDARY, false, e => {
-  let height=cube.getComponent(Transform).position.y
-  cube.getComponent(Transform).position.set(8,height+1,14)
+  let height=bird.getComponent(Transform).position.y
+  bird.getComponent(Transform).position.set(8,height+1,14)
 })
 
 //objects in scene
 
-let cube=new Entity()
-cube.addComponent(new GLTFShape("models/cube.glb"))
-cube.addComponent(new Transform({
-  position: new Vector3(8,5,14)
+
+
+let bird=new Entity()
+bird.addComponent(new GLTFShape("models/bird.glb"))
+bird.addComponent(new Transform({
+  position: new Vector3(8.5,5.5,14)
   //rotation:
 }))
+bird.addComponent(new utils.TriggerComponent(
+  new utils.TriggerBoxShape(Vector3.One(), Vector3.Zero()), //shape
+     birdLayer, //layer
+     obstacleLayer, //triggeredByLayer
+     () =>{
+       bird.getComponent(Transform).position=new Vector3(8.5,5.5,14)
+     }, //onTriggerEnter
+     null, //onTriggerExit
+     null, 
+     null, //onCameraExit
+     true
+
+      ))
 
 let roof=new Entity()
 roof.addComponent(new GLTFShape("models/roof.glb"))
@@ -99,15 +130,21 @@ collider.addComponent(new Transform({
   //rotation:
 }))
 
+let obs_16=new Entity()
+obs_16.addComponent(new GLTFShape("models/obs_16.glb"))
+obs_16.addComponent(new Transform({
+  position:new Vector3(31.5,0,14)
+}))
+obs_16.addComponent(new Obstacle())
 
 //systems
 
 export class Gravity implements ISystem {
   update() {
-    let transform = cube.getComponent(Transform)
-    let current=cube.getComponent(Transform).position.y
+    let transform = bird.getComponent(Transform)
+    let current=bird.getComponent(Transform).position.y
     if(current>0){
-    transform.position.y-=0.2}
+    transform.position.y-=0.25}
     //else -> game over
   }
 }
@@ -143,7 +180,7 @@ export class moveObstacles implements ISystem {
 
 
 
-
+spawner.pool.push(obs_16)
 
 //engine 
 
@@ -152,7 +189,7 @@ engine.addSystem(new createObstacles())
 engine.addSystem(new moveObstacles())
 
 
-engine.addEntity(cube)
+engine.addEntity(bird)
 engine.addEntity(roof)
 engine.addEntity(collider)
 
