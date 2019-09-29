@@ -6,6 +6,16 @@ import { TriggerComponent, TriggerBoxShape } from "../node_modules/decentraland-
 export class Obstacle {
 }
 
+@Component("lerpData")
+export class LerpData{
+  originPos: Vector3 = Vector3.Zero()
+  targetPos: Vector3 = Vector3.Zero()
+  originRot: Quaternion= Quaternion.Euler(0,0,0)
+  targetRot: Quaternion= Quaternion.Euler(0,0,0)
+  fractionPos: number = 0
+  fractionRot: number = 0
+}
+
 const birdLayer=1
 const obstacleLayer=2
 const beamLayer=3
@@ -99,15 +109,17 @@ input.subscribe("BUTTON_DOWN", ActionButton.SECONDARY, false, e => {
 let bird=new Entity()
 bird.addComponent(new GLTFShape("models/bird.glb"))
 bird.addComponent(new Transform({
-  position: new Vector3(8.5,5.5,14)
+  position: new Vector3(8.5,8,14)
   //rotation:
 }))
+
+bird.addComponent(new LerpData())
 bird.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(Vector3.One(), Vector3.Zero()), //shape
      birdLayer, //layer
      obstacleLayer, //triggeredByLayer
      () =>{
-       bird.getComponent(Transform).position=new Vector3(8.5,5.5,14)
+       bird.getComponent(Transform).position=new Vector3(8.5,8,14)
      }, //onTriggerEnter
      null, //onTriggerExit
      null, 
@@ -138,15 +150,21 @@ obs_16.addComponent(new Transform({
 obs_16.addComponent(new Obstacle())
 
 //systems
-
+let maxSpeed:number=1
 export class Gravity implements ISystem {
-  update() {
-    let transform = bird.getComponent(Transform)
-    let current=bird.getComponent(Transform).position.y
-    if(current>0){
-    transform.position.y-=0.25}
-    //else -> game over
+  update(dt:number) {
+    let transform = bird.getComponent(Transform).position
+    let lerp=bird.getComponent(LerpData)
+    lerp.originPos=transform
+    lerp.targetPos=new Vector3(8.5,0,14)
+    lerp.fractionPos+=(dt +lerp.fractionPos)/10
+    if(transform.y>0){
+      transform=Vector3.Lerp(lerp.originPos,lerp.targetPos,lerp.fractionPos)
+    }
   }
+
+    //else -> game over
+  
 }
 
 let timer: number = 0
