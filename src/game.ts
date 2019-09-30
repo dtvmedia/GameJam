@@ -27,7 +27,8 @@ export class SlerpData {
 
 
 //Variables
-
+let highscore:number=0
+let point:number=0
 const birdLayer=1
 const obstacleLayer=2
 const checkpointLayer=4
@@ -54,6 +55,10 @@ function gravity(value) { // min and max included
 function hit(){
    //onTriggerEnter
     clicked=false
+    if(point>highscore)highscore=point
+    highscoreEntity.getComponent(TextShape).value="HIGHSCORE:  "+highscore.toString()
+    point=0
+    scoreEntity.getComponent(TextShape).value="SCORE:  "
     engine.removeSystem(GravitySystem)
     engine.removeSystem(createObstaclesSystem)
     engine.removeSystem(moveObstaclesSystem) 
@@ -111,7 +116,12 @@ let checkpoint = {
         checkpointLayer, //layer
         birdLayer, //triggeredByLayer
         null, //onTriggerEnter
-        ()=>{log("exited checkpoint")}, //onTriggerExit
+        ()=>{
+          point++
+          log(point)
+          log(highscore)
+          scoreEntity.getComponent(TextShape).value="SCORE:  "+point.toString()
+        }, //onTriggerExit
         null, 
         null, //onCameraExit
         false
@@ -126,10 +136,25 @@ let checkpoint = {
 }
 
 
+let scoreEntity=new Entity()
+scoreEntity.addComponent(new Transform({
+  position: new Vector3(16,14,14.5)
+}))
+let pointText = new TextShape("SCORE:  ")
+pointText.hTextAlign="left"
+pointText.fontSize=5
+pointText.color=Color3.White()
+scoreEntity.addComponent(pointText)
 
-
-
-
+let highscoreEntity=new Entity()
+highscoreEntity.addComponent(new Transform({
+  position: new Vector3(23,14,14.5)
+}))
+let highscoreText = new TextShape("HIGHSCORE:  ")
+highscoreText.hTextAlign="left"
+highscoreText.fontSize=5
+highscoreText.color=Color3.White()
+highscoreEntity.addComponent(highscoreText)
 
 
 
@@ -210,7 +235,7 @@ input.subscribe("BUTTON_DOWN", ActionButton.SECONDARY, false, e => {
 input.subscribe("BUTTON_UP", ActionButton.POINTER, true, e => {
 
 log(e.hit.entityId)
-  if(e.hit.entityId=='El'){
+  if(e.hit.entityId=='Ed'){
     clicked=true
     engine.addSystem(GravitySystem)
     engine.addSystem(createObstaclesSystem)
@@ -300,6 +325,10 @@ inv_wall.addComponent(new Transform({
   position: new Vector3(16,0.5,8)
 }))
 inv_wall.addComponent(new GLTFShape("models/inv_wall.glb"))
+
+
+
+
 
 let obs1=new Entity()
 obs1.addComponent(new Transform())
@@ -676,16 +705,27 @@ export class Gravity implements ISystem {
 }
 
 export class SimpleRotate implements ISystem {
-  update() {
+  update(dt:number) {
   
     let transform2 = bird2.getComponent(Transform)
     transform2.rotate(Vector3.Up(), 3)
-
-
+    
   }
 }
 
-engine.addSystem(new SimpleRotate())
+
+let instructionsEntity=new Entity()
+instructionsEntity.addComponent(new Transform({
+  position: new Vector3(14.00,2.5,1.01)
+}))
+instructionsEntity.getComponent(Transform).rotation.setEuler(0,-180,0)
+let instructionText = new TextShape("Leftclick on the rotating object to start the game.\n\nPRIMARY BUTTON          (E on keyboard)   :   SMALL   JUMP\nSECONDARY BUTTON    (F on keyboard)   :   BIG        JUMP\n\nYour goal is to get past, as many obstacles as possible.\n\nEnjoy!")
+instructionText.hTextAlign="left"
+instructionText.fontSize=2
+instructionText.color=Color3.White()
+instructionsEntity.addComponent(instructionText)
+
+
 
 
 
@@ -698,6 +738,10 @@ engine.addEntity(floor)
 engine.addEntity(wall)
 engine.addEntity(stairs)
 engine.addEntity(inv_wall)
+engine.addEntity(scoreEntity)
+engine.addEntity(highscoreEntity)
+engine.addEntity(instructionsEntity)
+engine.addSystem(new SimpleRotate())
 
 let createObstaclesSystem=new createObstacles()
 let moveObstaclesSystem=new moveObstacles()
