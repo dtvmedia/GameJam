@@ -31,7 +31,8 @@ let obstacletimer: number = 0
 const entryPos= new Vector3(7.5,8,12.5)
 let clicked:boolean=false
 let globalTimer:number=0
-
+//let greenMaterial = new Material()
+//greenMaterial.albedoColor = Color3.Green()
 
 //functions
 
@@ -105,7 +106,7 @@ let checkpoint = {
         ()=>{log("exited checkpoint")}, //onTriggerExit
         null, 
         null, //onCameraExit
-        true
+        false
    
          ))
       checkpoint.pool.push(instance)
@@ -222,7 +223,7 @@ bird.addComponent(new utils.TriggerComponent(
      null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 
@@ -235,8 +236,8 @@ roof.addComponent(new GLTFShape("models/roof.glb"))
 roof.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(32,1,16), Vector3.Zero()), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     null, //onTriggerEnter
+     birdLayer, //triggeredByLayer
+     ()=>hit(), //onTriggerEnter
      null, //onTriggerExit
      null, 
      null, //onCameraExit
@@ -253,9 +254,9 @@ floor.getComponent(Transform).rotate(Vector3.Up(),180)
 floor.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(32,1,16), Vector3.Zero()), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer
+     () =>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
      false
