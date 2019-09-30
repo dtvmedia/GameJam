@@ -1,5 +1,4 @@
 import utils from "../node_modules/decentraland-ecs-utils/index"
-import { TriggerComponent, TriggerBoxShape } from "../node_modules/decentraland-ecs-utils/triggers/triggerSystem";
 
 //custom components
 @Component('obstacle')
@@ -7,23 +6,38 @@ export class Obstacle {
 }
 
 @Component("lerpData")
-export class LerpData{
-  originPos: Vector3 = Vector3.Zero()
-  targetPos: Vector3 = Vector3.Zero()
-  originRot: Quaternion= Quaternion.Euler(0,0,0)
-  targetRot: Quaternion= Quaternion.Euler(0,0,0)
-  fractionPos: number = 0
-  fractionRot: number = 0
+export class LerpData {
+  origin: Vector3 = Vector3.Zero()
+  target: Vector3 = Vector3.Zero()
+  fraction: number = 0
 }
+
+@Component("slerpData")
+export class SlerpData {
+  origin: Quaternion
+  target: Quaternion
+  fraction: number = 0
+}
+
+
+//Variables
 
 const birdLayer=1
 const obstacleLayer=2
-const beamLayer=3
+const obstacles = engine.getComponentGroup(Obstacle)
+let timer:number=0.5
+let obstacletimer: number = 0
+const entryPos= new Vector3(7.5,8,12.5)
+
 
 //functions
 
 function randomIntFromInterval(min, max) { // min and max included 
   return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+function gravity(value) { // min and max included 
+  return -0.4*Math.log(-value+2)+0.15;
 }
 
 
@@ -43,7 +57,7 @@ const spawner = {
     let y =randomIntFromInterval(1,10)
     let pos =randomIntFromInterval(6,10)*/
     let t = ent.getComponentOrCreate(Transform)
-    t.position.set(31.5, 0, 14)
+    t.position.set(30.5, 0, 12.5)
     
 
     //add entity to engine
@@ -66,24 +80,21 @@ const spawner = {
       instance.addComponent(new utils.TriggerComponent(
         new utils.TriggerBoxShape(Vector3.One(), Vector3.Zero()), //shape
            obstacleLayer, //layer
-           beamLayer, //triggeredByLayer
-           () =>{}, //onTriggerEnter
-           () =>{}, //onTriggerExit
+           null, //triggeredByLayer
+           null, //onTriggerEnter
+           null, //onTriggerExit
            null, 
            null, //onCameraExit
            true
       
             ))
       spawner.pool.push(instance)
+      
       return instance
     }
     return null
   }
 }
-
-
-
-
 
 
 //input handlers
@@ -92,35 +103,47 @@ const input = Input.instance
 
 // button down event e
 input.subscribe("BUTTON_DOWN", ActionButton.PRIMARY, false, e => {
-  let height=bird.getComponent(Transform).position.y
-  bird.getComponent(Transform).position.set(8,height+1,14)
-  
+    timer=-0.3 
 })
 // button down event f
 input.subscribe("BUTTON_DOWN", ActionButton.SECONDARY, false, e => {
-  let height=bird.getComponent(Transform).position.y
-  bird.getComponent(Transform).position.set(8,height+1,14)
+})
+// mmousclick on bird
+input.subscribe("BUTTON_UP", ActionButton.POINTER, true, e => {
+  if(e.hit.entityId=='Eb'){
+    engine.addSystem(GravitySystem)
+    engine.addSystem(createObstaclesSystem)
+    engine.addSystem(moveObstaclesSystem) 
+  }
 })
 
 //objects in scene
 
-
-
 let bird=new Entity()
-bird.addComponent(new GLTFShape("models/bird.glb"))
 bird.addComponent(new Transform({
-  position: new Vector3(8.5,8,14)
-  //rotation:
+  position:entryPos
 }))
-
+bird.addComponent(new GLTFShape("models/bird.glb"))
+bird.addComponent(new SlerpData())
 bird.addComponent(new LerpData())
 bird.addComponent(new utils.TriggerComponent(
-  new utils.TriggerBoxShape(Vector3.One(), Vector3.Zero()), //shape
+  new utils.TriggerSphereShape(1, new Vector3(0,0,0)), //shape
      birdLayer, //layer
      obstacleLayer, //triggeredByLayer
-     () =>{
-       bird.getComponent(Transform).position=new Vector3(8.5,8,14)
-     }, //onTriggerEnter
+     ()=>{  //onTriggerEnter
+        engine.removeSystem(GravitySystem)
+        engine.removeSystem(createObstaclesSystem)
+        engine.removeSystem(moveObstaclesSystem) 
+        spawner.pool.forEach(entity=>{
+          engine.removeEntity(entity)
+        })
+        bird.getComponent(Transform).position=entryPos
+        let lerp=bird.getComponent(LerpData)
+        let slerp=bird.getComponent(SlerpData)
+        timer=0.5
+        lerp.fraction=0
+        slerp.fraction=0
+     }, 
      null, //onTriggerExit
      null, 
      null, //onCameraExit
@@ -128,64 +151,68 @@ bird.addComponent(new utils.TriggerComponent(
 
       ))
 
+      
 let roof=new Entity()
-roof.addComponent(new GLTFShape("models/roof.glb"))
 roof.addComponent(new Transform({
-  position: new Vector3(16,0,8)
-  //rotation:
+  position: new Vector3(16,15.5,8)
 }))
+roof.addComponent(new GLTFShape("models/roof.glb"))
+roof.addComponent(new utils.TriggerComponent(
+  new utils.TriggerBoxShape(new Vector3(32,1,16), Vector3.Zero()), //shape
+     obstacleLayer, //layer
+     null, //triggeredByLayer
+     () =>{}, //onTriggerEnter
+     () =>{}, //onTriggerExit
+     null, 
+     null, //onCameraExit
+     true
 
-let collider=new Entity()
-collider.addComponent(new GLTFShape("models/collider.glb"))
-collider.addComponent(new Transform({
-  position: new Vector3(16,0,8)
-  //rotation:
-}))
+      ))
 
-let obs_16=new Entity()
-obs_16.addComponent(new GLTFShape("models/obs_16.glb"))
-obs_16.addComponent(new Transform({
-  position:new Vector3(31.5,0,14)
+let floor=new Entity()
+floor.addComponent(new Transform({
+  position: new Vector3(16,0.5,8)
 }))
-obs_16.addComponent(new Obstacle())
+floor.addComponent(new GLTFShape("models/floor.glb"))
+floor.getComponent(Transform).rotate(Vector3.Up(),180)
+floor.addComponent(new utils.TriggerComponent(
+  new utils.TriggerBoxShape(new Vector3(32,1,16), Vector3.Zero()), //shape
+     obstacleLayer, //layer
+     null, //triggeredByLayer
+     () =>{}, //onTriggerEnter
+     () =>{}, //onTriggerExit
+     null, 
+     null, //onCameraExit
+     true
+
+      ))
+
+let wall=new Entity()
+wall.addComponent(new Transform({
+  position: new Vector3(16,0.5,8)
+}))
+wall.addComponent(new GLTFShape("models/wall.glb"))
+wall.getComponent(Transform).rotate(Vector3.Up(),180)
 
 //systems
-let maxSpeed:number=1
-export class Gravity implements ISystem {
-  update(dt:number) {
-    let transform = bird.getComponent(Transform).position
-    let lerp=bird.getComponent(LerpData)
-    lerp.originPos=transform
-    lerp.targetPos=new Vector3(8.5,0,14)
-    lerp.fractionPos+=(dt +lerp.fractionPos)/10
-    if(transform.y>0){
-      transform=Vector3.Lerp(lerp.originPos,lerp.targetPos,lerp.fractionPos)
-    }
-  }
 
-    //else -> game over
-  
-}
-
-let timer: number = 0
 export class createObstacles implements ISystem {
   update(dt:number) {
-    if (timer>0)
-      {timer-=dt}
+    if (obstacletimer>0)
+      {obstacletimer-=dt}
     else
       {
         spawner.spawnEntity()
-        timer=4
+        obstacletimer=4
       }
   }
 }
 
-const obstacles = engine.getComponentGroup(Obstacle)
 export class moveObstacles implements ISystem {
   //Executed ths function on every frame
   update() {
     // Iterate over the entities in an component group
-    for (let entity of obstacles.entities) {
+      for (let entity of obstacles.entities) {
       let transform = entity.getComponent(Transform)
       let xPos=transform.position.x
       let distance = Vector3.Left().scale(0.1)
@@ -196,18 +223,52 @@ export class moveObstacles implements ISystem {
   }
 }
 
+export class Gravity implements ISystem {
+  update(dt: number) {
+    let transform = bird.getComponent(Transform)
+    let lerp = bird.getComponent(LerpData)
+    let slerp = bird.getComponent(SlerpData)
+    let rotz= bird.getComponent(Transform).rotation.eulerAngles.z
+
+    lerp.origin=transform.position
+    lerp.target=new Vector3(transform.position.x,transform.position.y-1,transform.position.z)
+    slerp.origin=transform.rotation
+    slerp.target=Quaternion.Euler(0,0,rotz-30)
+    
+    timer+=dt
+    if(gravity(timer)>1){
+      lerp.fraction=1
+      slerp.fraction=0.7
+    }else{
+    lerp.fraction=gravity(timer)
+    slerp.fraction=gravity(timer)
+    }
+      transform.position = Vector3.Lerp(
+      lerp.origin,
+      lerp.target,
+      lerp.fraction
+      )
+      transform.rotation=Quaternion.Slerp(
+      slerp.origin,
+      slerp.target,
+      slerp.fraction  
+      )
+    
+  }
+}
 
 
-spawner.pool.push(obs_16)
+
 
 //engine 
-
-engine.addSystem(new Gravity())
-engine.addSystem(new createObstacles())
-engine.addSystem(new moveObstacles())
-
-
 engine.addEntity(bird)
 engine.addEntity(roof)
-engine.addEntity(collider)
+engine.addEntity(floor)
+engine.addEntity(wall)
+
+let createObstaclesSystem=new createObstacles()
+let moveObstaclesSystem=new moveObstacles()
+let GravitySystem=new Gravity()
+
+
 
