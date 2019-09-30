@@ -3,7 +3,13 @@ import utils from "../node_modules/decentraland-ecs-utils/index"
 //custom components
 @Component('obstacle')
 export class Obstacle {
+  
 }
+
+@Component('ringData')
+export class RingData {
+}
+
 
 @Component("lerpData")
 export class LerpData {
@@ -25,6 +31,7 @@ export class SlerpData {
 const birdLayer=1
 const obstacleLayer=2
 const checkpointLayer=4
+const ringClicked=engine.getComponentGroup(RingData)
 const obstacles = engine.getComponentGroup(Obstacle)
 let timer:number=0.5
 let obstacletimer: number = 0
@@ -57,6 +64,7 @@ function hit(){
       if(entity.isAddedToEngine)engine.removeEntity(entity)
     })
     bird.getComponent(Transform).position=entryPos
+    bird.getComponent(Transform).rotation.setEuler(0,0,0)
     let lerp=bird.getComponent(LerpData)
     let slerp=bird.getComponent(SlerpData)
     timer=0.5
@@ -200,7 +208,9 @@ input.subscribe("BUTTON_DOWN", ActionButton.SECONDARY, false, e => {
 })
 // mmousclick on bird
 input.subscribe("BUTTON_UP", ActionButton.POINTER, true, e => {
-  if(e.hit.entityId=='Eb'){
+
+log(e.hit.entityId)
+  if(e.hit.entityId=='El'){
     clicked=true
     engine.addSystem(GravitySystem)
     engine.addSystem(createObstaclesSystem)
@@ -212,7 +222,7 @@ let bird=new Entity()
 bird.addComponent(new Transform({
   position:entryPos
 }))
-bird.addComponent(new GLTFShape("models/bird.glb"))
+bird.addComponent(new GLTFShape("models/ring.glb"))
 bird.addComponent(new SlerpData())
 bird.addComponent(new LerpData())
 bird.addComponent(new utils.TriggerComponent(
@@ -224,8 +234,23 @@ bird.addComponent(new utils.TriggerComponent(
      null, 
      null, //onCameraExit
      false
-
       ))
+
+let bird2=new Entity()
+bird2.setParent(bird)
+bird2.addComponent(new Transform())
+bird2.addComponent(new GLTFShape("models/ring2.glb"))
+
+let stairs=new Entity()
+stairs.addComponent(new Transform({
+  position: new Vector3(16,0.420,8)
+}))
+stairs.addComponent(new GLTFShape("models/stairs.glb"))
+stairs.getComponent(Transform).rotation.setEuler(0,180,0)
+
+
+
+
 
       
 let roof=new Entity()
@@ -294,7 +319,7 @@ obs1.addComponent(new utils.TriggerComponent(
 spawner.pool.push(obs1)
 
 let obs2=new Entity()
-let obs2_triggeroben=new(Entity)
+let obs2_triggeroben=new Entity()
 obs2_triggeroben.setParent(obs2)
 obs2_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,1,1), new Vector3(0,13.5,0)), //shape
@@ -324,7 +349,7 @@ obs2.addComponent(new utils.TriggerComponent(
 spawner.pool.push(obs2)
 
 let obs3=new Entity()
-let obs3_triggeroben=new(Entity)
+let obs3_triggeroben=new Entity()
 obs3_triggeroben.setParent(obs3)
 obs3_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,2,1), new Vector3(0,13,0)), //shape
@@ -354,7 +379,7 @@ obs3.addComponent(new utils.TriggerComponent(
 spawner.pool.push(obs3)
 
 let obs4=new Entity()
-let obs4_triggeroben=new(Entity)
+let obs4_triggeroben=new Entity()
 obs4_triggeroben.setParent(obs4)
 obs4_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,3,1), new Vector3(0,12.5,0)), //shape
@@ -384,7 +409,7 @@ obs4.addComponent(new utils.TriggerComponent(
 spawner.pool.push(obs4)
 
 let obs5=new Entity()
-let obs5_triggeroben=new(Entity)
+let obs5_triggeroben=new Entity()
 obs5_triggeroben.setParent(obs5)
 obs5_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,4,1), new Vector3(0,12,0)), //shape
@@ -414,7 +439,7 @@ obs5.addComponent(new utils.TriggerComponent(
 spawner.pool.push(obs5)
 
 let obs6=new Entity()
-let obs6_triggeroben=new(Entity)
+let obs6_triggeroben=new Entity()
 obs6_triggeroben.setParent(obs6)
 obs6_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,5,1), new Vector3(0,11.5,0)), //shape
@@ -444,7 +469,7 @@ obs6.addComponent(new utils.TriggerComponent(
 spawner.pool.push(obs6)
 
 let obs7=new Entity()
-let obs7_triggeroben=new(Entity)
+let obs7_triggeroben=new Entity()
 obs7_triggeroben.setParent(obs7)
 obs7_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,6,1), new Vector3(0,11,0)), //shape
@@ -474,7 +499,7 @@ obs7.addComponent(new utils.TriggerComponent(
 spawner.pool.push(obs7)
 
 let obs8=new Entity()
-let obs8_triggeroben=new(Entity)
+let obs8_triggeroben=new Entity()
 obs8_triggeroben.setParent(obs8)
 obs8_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,7,1), new Vector3(0,10.5,0)), //shape
@@ -504,7 +529,7 @@ obs8.addComponent(new utils.TriggerComponent(
 spawner.pool.push(obs8)
 
 let obs9=new Entity()
-let obs9_triggeroben=new(Entity)
+let obs9_triggeroben=new Entity()
 obs9_triggeroben.setParent(obs9)
 obs9_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,8,1), new Vector3(0,10,0)), //shape
@@ -534,7 +559,7 @@ obs9.addComponent(new utils.TriggerComponent(
 spawner.pool.push(obs9)
 
 let obs10=new Entity()
-let obs10_triggeroben=new(Entity)
+let obs10_triggeroben=new Entity()
 obs10_triggeroben.setParent(obs10)
 obs10_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,9,1), new Vector3(0,9.5,0)), //shape
@@ -650,6 +675,17 @@ export class Gravity implements ISystem {
   }
 }
 
+export class SimpleRotate implements ISystem {
+  update() {
+  
+    let transform2 = bird2.getComponent(Transform)
+    transform2.rotate(Vector3.Up(), 3)
+
+
+  }
+}
+
+engine.addSystem(new SimpleRotate())
 
 
 
@@ -660,6 +696,7 @@ engine.addEntity(bird)
 engine.addEntity(roof)
 engine.addEntity(floor)
 engine.addEntity(wall)
+engine.addEntity(stairs)
 engine.addEntity(inv_wall)
 
 let createObstaclesSystem=new createObstacles()
