@@ -24,6 +24,7 @@ export class SlerpData {
 
 const birdLayer=1
 const obstacleLayer=2
+const checkpointLayer=4
 const obstacles = engine.getComponentGroup(Obstacle)
 let timer:number=0.5
 let obstacletimer: number = 0
@@ -41,6 +42,88 @@ function randomIntFromInterval(min, max) { // min and max included
 function gravity(value) { // min and max included 
   return -0.4*Math.log(-value+2)+0.15;
 }
+
+function hit(){
+   //onTriggerEnter
+    clicked=false
+    engine.removeSystem(GravitySystem)
+    engine.removeSystem(createObstaclesSystem)
+    engine.removeSystem(moveObstaclesSystem) 
+    spawner.pool.forEach(entity=>{
+      if(entity.isAddedToEngine)engine.removeEntity(entity)
+    })
+    checkpoint.pool.forEach(entity=>{
+      if(entity.isAddedToEngine)engine.removeEntity(entity)
+    })
+    bird.getComponent(Transform).position=entryPos
+    let lerp=bird.getComponent(LerpData)
+    let slerp=bird.getComponent(SlerpData)
+    timer=0.5
+    lerp.fraction=0
+    slerp.fraction=0
+ }
+
+
+
+let checkpoint = {
+  MAX_POOL_SIZE: 20,
+  pool: [] as Entity[],
+
+  spawnEntity() {
+    // Get an entity from the pool
+    let ent = checkpoint.getEntityFromPool()
+
+    if (!ent) return
+
+    let t = ent.getComponentOrCreate(Transform)
+    t.position.set(30.5, 1, 12.5)
+    
+
+    //add entity to engine
+    engine.addEntity(ent)
+  },
+
+  getEntityFromPool(): Entity | null {
+    // Check if an existing entity can be used
+      
+    
+    for (let i = 0; i < checkpoint.pool.length; i++) {
+      if (!checkpoint.pool[i].alive) {
+        log(checkpoint.pool[i])
+        return checkpoint.pool[i]
+      }
+    }
+    // If none of the existing are available, create a new one, unless the maximum pool size is reached
+    if (checkpoint.pool.length < checkpoint.MAX_POOL_SIZE) {
+      let instance = new Entity()
+      instance.addComponent(new Obstacle()) //set Obstacle flag
+      instance.addComponent(new utils.TriggerComponent(
+        new utils.TriggerBoxShape(new Vector3(1,14,1), new Vector3(0,7,0)), //shape
+        checkpointLayer, //layer
+        birdLayer, //triggeredByLayer
+        null, //onTriggerEnter
+        ()=>{log("exited checkpoint")}, //onTriggerExit
+        null, 
+        null, //onCameraExit
+        true
+   
+         ))
+      checkpoint.pool.push(instance)
+      
+      return instance
+    }
+    return null
+  }
+}
+
+
+
+
+
+
+
+
+
 
 
 // Define spawner singleton object
@@ -134,22 +217,8 @@ bird.addComponent(new LerpData())
 bird.addComponent(new utils.TriggerComponent(
   new utils.TriggerSphereShape(1, new Vector3(0,0,0)), //shape
      birdLayer, //layer
-     obstacleLayer, //triggeredByLayer
-     ()=>{  //onTriggerEnter
-        clicked=false
-        engine.removeSystem(GravitySystem)
-        engine.removeSystem(createObstaclesSystem)
-        engine.removeSystem(moveObstaclesSystem) 
-        spawner.pool.forEach(entity=>{
-          engine.removeEntity(entity)
-        })
-        bird.getComponent(Transform).position=entryPos
-        let lerp=bird.getComponent(LerpData)
-        let slerp=bird.getComponent(SlerpData)
-        timer=0.5
-        lerp.fraction=0
-        slerp.fraction=0
-     }, 
+     null, //triggeredByLayer
+     null, 
      null, //onTriggerExit
      null, 
      null, //onCameraExit
@@ -171,7 +240,7 @@ roof.addComponent(new utils.TriggerComponent(
      null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 
@@ -189,7 +258,7 @@ floor.addComponent(new utils.TriggerComponent(
      () =>{}, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 
@@ -200,6 +269,12 @@ wall.addComponent(new Transform({
 wall.addComponent(new GLTFShape("models/wall.glb"))
 wall.getComponent(Transform).rotate(Vector3.Up(),180)
 
+let inv_wall=new Entity()
+inv_wall.addComponent(new Transform({
+  position: new Vector3(16,0.5,8)
+}))
+inv_wall.addComponent(new GLTFShape("models/inv_wall.glb"))
+
 let obs1=new Entity()
 obs1.addComponent(new Transform())
 obs1.addComponent(new GLTFShape("models/obs1.glb"))
@@ -207,12 +282,12 @@ obs1.addComponent(new Obstacle())
 obs1.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,10,1), new Vector3(0,5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer 
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs1)
@@ -223,12 +298,12 @@ obs2_triggeroben.setParent(obs2)
 obs2_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,1,1), new Vector3(0,13.5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     null, //onTriggerEnter
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
      null, //onTriggerExit
      null,  
      null, //onCameraExit
-     true
+     false
 
       ))
 obs2.addComponent(new Transform())  
@@ -237,12 +312,12 @@ obs2.addComponent(new Obstacle())
 obs2.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,9,1), new Vector3(0,4.5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs2)
@@ -253,12 +328,12 @@ obs3_triggeroben.setParent(obs3)
 obs3_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,2,1), new Vector3(0,13,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     null, //onTriggerEnter
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
      null, //onTriggerExit
      null,  
      null, //onCameraExit
-     true
+     false
 
       ))
 obs3.addComponent(new Transform())  
@@ -267,12 +342,12 @@ obs3.addComponent(new Obstacle())
 obs3.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,8,1), new Vector3(0,4,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs3)
@@ -283,12 +358,12 @@ obs4_triggeroben.setParent(obs4)
 obs4_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,3,1), new Vector3(0,12.5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     null, //onTriggerEnter
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
      null, //onTriggerExit
      null,  
      null, //onCameraExit
-     true
+     false
 
       ))
 obs4.addComponent(new Transform())  
@@ -297,12 +372,12 @@ obs4.addComponent(new Obstacle())
 obs4.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,7,1), new Vector3(0,3.5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs4)
@@ -313,12 +388,12 @@ obs5_triggeroben.setParent(obs5)
 obs5_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,4,1), new Vector3(0,12,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     null, //onTriggerEnter
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
      null, //onTriggerExit
      null,  
      null, //onCameraExit
-     true
+     false
 
       ))
 obs5.addComponent(new Transform())  
@@ -327,12 +402,12 @@ obs5.addComponent(new Obstacle())
 obs5.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,6,1), new Vector3(0,3,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs5)
@@ -343,12 +418,12 @@ obs6_triggeroben.setParent(obs6)
 obs6_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,5,1), new Vector3(0,11.5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     null, //onTriggerEnter
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
      null, //onTriggerExit
      null,  
      null, //onCameraExit
-     true
+     false
 
       ))
 obs6.addComponent(new Transform())  
@@ -357,12 +432,12 @@ obs6.addComponent(new Obstacle())
 obs6.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,5,1), new Vector3(0,2.5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs6)
@@ -373,12 +448,12 @@ obs7_triggeroben.setParent(obs7)
 obs7_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,6,1), new Vector3(0,11,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     null, //onTriggerEnter
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
      null, //onTriggerExit
      null,  
      null, //onCameraExit
-     true
+     false
 
       ))
 obs7.addComponent(new Transform())  
@@ -387,12 +462,12 @@ obs7.addComponent(new Obstacle())
 obs7.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,4,1), new Vector3(0,2,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs7)
@@ -403,12 +478,12 @@ obs8_triggeroben.setParent(obs8)
 obs8_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,7,1), new Vector3(0,10.5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     null, //onTriggerEnter
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
      null, //onTriggerExit
      null,  
      null, //onCameraExit
-     true
+     false
 
       ))
 obs8.addComponent(new Transform())  
@@ -417,12 +492,12 @@ obs8.addComponent(new Obstacle())
 obs8.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,3,1), new Vector3(0,1.5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs8)
@@ -433,12 +508,12 @@ obs9_triggeroben.setParent(obs9)
 obs9_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,8,1), new Vector3(0,10,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     null, //onTriggerEnter
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
      null, //onTriggerExit
      null,  
      null, //onCameraExit
-     true
+     false
 
       ))
 obs9.addComponent(new Transform())  
@@ -447,12 +522,12 @@ obs9.addComponent(new Obstacle())
 obs9.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,2,1), new Vector3(0,1,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs9)
@@ -463,12 +538,12 @@ obs10_triggeroben.setParent(obs10)
 obs10_triggeroben.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,9,1), new Vector3(0,9.5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     null, //onTriggerEnter
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
      null, //onTriggerExit
      null,  
      null, //onCameraExit
-     true
+     false
 
       ))
 obs10.addComponent(new Transform())  
@@ -477,12 +552,12 @@ obs10.addComponent(new Obstacle())
 obs10.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,1,1), new Vector3(0,0.5,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs10)
@@ -494,12 +569,12 @@ obs11.addComponent(new Obstacle())
 obs11.addComponent(new utils.TriggerComponent(
   new utils.TriggerBoxShape(new Vector3(1,10,1), new Vector3(0,9,0)), //shape
      obstacleLayer, //layer
-     null, //triggeredByLayer 
-     () =>{}, //onTriggerEnter
-     () =>{}, //onTriggerExit
+     birdLayer, //triggeredByLayer 
+     ()=>hit(), //onTriggerEnter
+     null, //onTriggerExit
      null, 
      null, //onCameraExit
-     true
+     false
 
       ))
 spawner.pool.push(obs11)
@@ -515,6 +590,8 @@ export class createObstacles implements ISystem {
     else
       {
         spawner.spawnEntity()
+        checkpoint.spawnEntity()
+        //checkpoint.spawnEntity()
         if(globalTimer>10){
           globalTimer=0
           if(obstacletimer>=2.2) obstacletimer-=0.2}
@@ -575,11 +652,14 @@ export class Gravity implements ISystem {
 
 
 
+
+
 //engine 
 engine.addEntity(bird)
 engine.addEntity(roof)
 engine.addEntity(floor)
 engine.addEntity(wall)
+engine.addEntity(inv_wall)
 
 let createObstaclesSystem=new createObstacles()
 let moveObstaclesSystem=new moveObstacles()
