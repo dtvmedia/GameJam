@@ -27,5 +27,17 @@
     "teleportPosition": ""
   },
   "main": "bin/game.js",
-  "tags": []
+  "tags": [],
+  
+  "spawnPoints": [
+    {
+      "name": "spawn1",
+      "default": true,
+      "position": {
+        "x": 16,
+        "y": 0,
+        "z": 0
+      }
+    }
+  ]
 }
